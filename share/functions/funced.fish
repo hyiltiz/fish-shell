@@ -1,5 +1,11 @@
 function funced --description 'Edit function definition'
-    set -l editor $EDITOR
+    set -l editor
+    # Check VISUAL first since theoretically EDITOR could be ed
+    if set -q VISUAL
+        set editor $VISUAL
+    else if set -q EDITOR
+        set editor $EDITOR
+    end
     set -l interactive
     set -l funcname
     while set -q argv[1]
@@ -31,7 +37,7 @@ function funced --description 'Edit function definition'
         set -e argv[1]
     end
 
-    if begin; set -q funcname[2]; or not test "$funcname[1]"; end
+    if test (count $funcname) -ne 1
         set_color red
         _ "funced: You must specify one function name
 "
@@ -51,7 +57,7 @@ function funced --description 'Edit function definition'
     if test -n "$editor"
         set -l editor_cmd
         eval set editor_cmd $editor
-        if not type -f "$editor_cmd[1]" >/dev/null
+        if not type -q -f "$editor_cmd[1]"
             _ "funced: The value for \$EDITOR '$editor' could not be used because the command '$editor_cmd[1]' could not be found
     "
             set editor fish
@@ -81,20 +87,38 @@ function funced --description 'Edit function definition'
         return 0
     end
 
-    set -q TMPDIR; or set -l TMPDIR /tmp
-    set -l tmpname (printf "$TMPDIR/fish_funced_%d_%d.fish" %self (random))
-    while test -f $tmpname
-        set tmpname (printf "$TMPDIR/fish_funced_%d_%d.fish" %self (random))
-    end
+    set tmpname (mktemp -t fish_funced.XXXXXXXXXX.fish)
 
     if functions -q -- $funcname
         functions -- $funcname > $tmpname
     else
         echo $init > $tmpname
     end
-    if eval $editor $tmpname
-        . $tmpname
-    end
+        # Repeatedly edit until it either parses successfully, or the user cancels
+        # If the editor command itself fails, we assume the user cancelled or the file
+        # could not be edited, and we do not try again
+        while true
+            if not eval $editor $tmpname
+                        _ "Editing failed or was cancelled"
+                        echo
+                else
+                if not source $tmpname
+                                # Failed to source the function file. Prompt to try again.
+                                echo # add a line between the parse error and the prompt
+                                set -l repeat
+                                set -l prompt (_ 'Edit the file again\? [Y/n]')
+                                while test -z "$repeat"
+                                        read -p "echo $prompt\  " repeat
+                                end
+                                if not contains $repeat n N no NO No nO
+                                        continue
+                                end
+                                _ "Cancelled function editing"
+                                echo
+                        end
+                end
+                break
+        end
     set -l stat $status
     rm -f $tmpname >/dev/null
     return $stat

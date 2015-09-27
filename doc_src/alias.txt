@@ -1,18 +1,40 @@
 \section alias alias - create a function
 
 \subsection alias-synopsis Synopsis
-<pre>alias NAME DEFINITION
-alias NAME=DEFINITION</pre>
+\fish{synopsis}
+alias NAME DEFINITION
+alias NAME=DEFINITION
+\endfish
 
 \subsection alias-description Description
 
-Alias is a shellscript wrapper around the function builtin.
-It exists for backwards compatibility with Posix
-shells. For other uses, it is recommended to define a <a
-href='#function'>function</a>.
+`alias` is a simple wrapper for the `function` builtin. It exists for backwards compatibility with Posix shells. For other uses, it is recommended to define a <a href='#function'>function</a>.
 
-Alias does not keep track of which functions have been defined using
-alias, nor does it allow erasing of aliases.
+`fish` does not keep track of which functions have been defined using `alias`. They must be erased using `functions -e`.
 
-- NAME is the name of the function to define
-- DEFINITION is the body of the function. The string " $argv" will be appended to the body.
+- `NAME` is the name of the alias
+
+- `DEFINITION` is the actual command to execute. The string `$argv` will be appended.
+
+You cannot create an alias to a function with the same name.
+
+Note that spaces need to be escaped in the call to alias just like in the commandline _even inside the quotes_.
+
+
+\subsection alias-example Example
+
+The following code will create `rmi`, which runs `rm` with additional arguments on every invocation.
+
+\fish
+alias rmi "rm -i"
+
+# This is equivalent to entering the following function:
+
+function rmi
+    rm -i $argv
+end
+
+# This needs to have the spaces escaped or "Chrome.app..." will be seen as an argument to "/Applications/Google":
+
+alias chrome='/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome banana'
+\endfish

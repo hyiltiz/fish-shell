@@ -20,10 +20,8 @@ else
 fi
 
 # Determine which man pages we don't want to generate.
-# Don't make a test man page. fish's test is conforming, so the system man pages
-# are applicable and generally better.
 # on OS X, don't make a man page for open, since we defeat fish's open function on OS X.
-CONDEMNED_PAGES=test.1
+CONDEMNED_PAGES=
 if test `uname` = 'Darwin'; then
 	CONDEMNED_PAGES="$CONDEMNED_PAGES open.1"
 fi
@@ -39,10 +37,12 @@ resolve_path()
 # Expand relative paths
 DOXYFILE=`resolve_path "$DOXYFILE"`
 INPUTDIR=`resolve_path "$INPUTDIR"`
+INPUTFILTER=`resolve_path "$INPUT_FILTER"`
 OUTPUTDIR=`resolve_path "$OUTPUTDIR"`
 
 echo "      doxygen file: $DOXYFILE"
 echo "   input directory: $INPUTDIR"
+echo "      input filter: $INPUTFILTER"
 echo "  output directory: $OUTPUTDIR"
 echo "          skipping: $CONDEMNED_PAGES"
 
@@ -68,6 +68,12 @@ if test -z "$DOXYGENPATH"; then
     exit 0
 fi
 
+# Check we have the lexicon filter
+if test -z "$INPUT_FILTER"; then
+    echo >&2 "Lexicon filter is not available. Continuing without."
+    INPUTFILTER=''
+fi
+
 # Determine where our output should go
 if ! mkdir -p "${OUTPUTDIR}" ; then
     echo "Could not create output directory '${OUTPUTDIR}'"
@@ -88,7 +94,8 @@ done
 # Input is kept as . because we cd to the input directory beforehand
 # This prevents doxygen from generating "documentation" for intermediate directories
 DOXYPARAMS=$(cat <<EOF
-PROJECT_NUMBER=2.0.0
+PROJECT_NUMBER=$PROJECT_NUMBER
+INPUT_FILTER=$INPUTFILTER
 INPUT=.
 OUTPUT_DIRECTORY=$OUTPUTDIR
 QUIET=YES
@@ -102,7 +109,7 @@ find "${OUTPUTDIR}" -name "*.1" -delete
 
 # Run doxygen
 cd "$TMPLOC"
-(cat "${DOXYFILE}" ; echo "$DOXYPARAMS";) | "$DOXYGENPATH" - 
+(cat "${DOXYFILE}" ; echo "$DOXYPARAMS";) | "$DOXYGENPATH" -
 
 # Remember errors
 RESULT=$?
@@ -112,15 +119,16 @@ if test "$RESULT" = 0 ; then
 
 	# Postprocess the files
 	for i in "$INPUTDIR"/*.txt; do
-		# It would be nice to use -i here for edit in place, but that is not portable 
+		# It would be nice to use -i here for edit in place, but that is not portable
 		CMD_NAME=`basename "$i" .txt`;
-		sed -e "s/\(.\)\\.SH/\1/" -e "s/$CMD_NAME *\\\\- *\"\(.*\)\"/\1/" "${CMD_NAME}.1" > "${CMD_NAME}.1.tmp"
+		sed < ${CMD_NAME}.1 > ${CMD_NAME}.1.tmp \
+            -e "/.SH \"$CMD_NAME/d" \
+            -e "s/^$CMD_NAME * \\\- \([^ ]*\) /\\\fB\1\\\fP -/"
 		mv "${CMD_NAME}.1.tmp" "${CMD_NAME}.1"
 	done
-	
+
 	# Erase condemned pages
 	rm -f $CONDEMNED_PAGES
-	
 fi
 
 # Destroy TMPLOC

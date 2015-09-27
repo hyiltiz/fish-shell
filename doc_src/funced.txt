@@ -1,20 +1,18 @@
 \section funced funced - edit a function interactively
 
 \subsection funced-synopsis Synopsis
- <code>funced [OPTIONS] NAME</code>
+\fish{synopsis}
+funced [OPTIONS] NAME
+\endfish
 
 \subsection funced-description Description
 
-Use the funced command to edit the definition of a function. If there is no
-function with the name specified, a skeleton function is inserted. If the
-function exists, its definition will be shown in your editor or on the command
-line.
+`funced` provides an interface to edit the definition of the function `NAME`.
 
-By default, funced edits functions using the text editor in your $EDITOR
-variable, if set; otherwise it uses the built-in editor.
+If the `$VISUAL` environment variable is set, it will be used as the program to edit the function. If `$VISUAL` is unset but `$EDITOR` is set, that will be used. Otherwise, a built-in editor will be used.
 
-- <code>-e command</code> or <code>--editor command</code> Open the function
-  body inside the text editor given by the command (for example, "vi"). The
-  command 'fish' will use the built-in editor.
-- <code>-i</code> or <code>--interactive</code> Open function body in the
-  built-in editor.
+If there is no function called `NAME` a new function will be created with the specified name
+
+- `-e command` or `--editor command` Open the function body inside the text editor given by the command (for example, "vi"). The command 'fish' will use the built-in editor.
+
+- `-i` or `--interactive` Open function body in the built-in editor.

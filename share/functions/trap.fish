@@ -12,7 +12,7 @@ function __trap_switch
 
 	switch $argv[1]
 		case EXIT
-			echo --on-exit %self
+			echo --on-process-exit %self
 
 		case '*'
 			echo --on-signal $argv[1]
@@ -25,21 +25,32 @@ function trap -d 'Perform an action when the shell receives a signal'
 	set -l mode
 	set -l cmd
 	set -l sig
-	set -l shortopt
-	set -l longopt
 
-	set -l shortopt -o lph
+	set -l options
 	set -l longopt
-	if not getopt -T >/dev/null
-		set longopt -l print,help,list-signals
+	set -l shortopt lph
+	if not getopt -T > /dev/null
+		# GNU getopt
+		set longopt print,help,list-signals
+		set options -o $shortopt -l $longopt --
+		# Verify options
+		if not getopt -n type $options $argv >/dev/null
+			return 1
+		end
+	else
+		# Old getopt, used on OS X
+		set options $shortopt
+		# Verify options
+		if not getopt $options $argv >/dev/null
+			return 1
+		end
 	end
 
-	if not getopt -n type -Q $shortopt $longopt -- $argv >/dev/null
-		return 1
-	end
+	# Do the real getopt invocation
+	set -l tmp (getopt $options $argv)
 
-	set -l tmp (getopt $shortopt $longopt -- $argv)
-
+	# Break tmp up into an array
+	set -l opt
 	eval set opt $tmp
 
 	while count $opt >/dev/null
@@ -113,7 +124,7 @@ function trap -d 'Perform an action when the shell receives a signal'
 			if count $opt >/dev/null
 				set names $opt
 			else
-				set names (functions -na|sgrep "^__trap_handler_"|sed -e 's/__trap_handler_//' )
+				set names (functions -na| __fish_sgrep "^__trap_handler_"|sed -e 's/__trap_handler_//' )
 			end
 
 			for i in $names

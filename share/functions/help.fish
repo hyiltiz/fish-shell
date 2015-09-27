@@ -22,11 +22,11 @@ function help --description 'Show help for the fish shell'
 	# Find a suitable browser for viewing the help pages. This is needed
 	# by the help function defined below.
 	#
-	set -l graphical_browsers htmlview x-www-browser firefox galeon mozilla konqueror epiphany opera netscape rekonq
+	set -l graphical_browsers htmlview x-www-browser firefox galeon mozilla konqueror epiphany opera netscape rekonq google-chrome chromium-browser
 	set -l text_browsers htmlview www-browser links elinks lynx w3m
 
-	if test $BROWSER
-		# User has manualy set a preferred browser, so we respect that
+	if type -q "$BROWSER"
+		# User has manually set a preferred browser, so we respect that
 		set fish_browser $BROWSER
 
 		# If browser is known to be graphical, put into background
@@ -36,7 +36,7 @@ function help --description 'Show help for the fish shell'
 	else
 		# Check for a text-based browser.
 		for i in $text_browsers
-			if type -f $i >/dev/null
+			if type -q -f $i
 				set fish_browser $i
 				break
 			end
@@ -46,7 +46,7 @@ function help --description 'Show help for the fish shell'
 		# browser to use instead.
 		if test "$DISPLAY" -a \( "$XAUTHORITY" = "$HOME/.Xauthority" -o "$XAUTHORITY" = "" \)
 			for i in $graphical_browsers
-				if type -f $i >/dev/null
+				if type -q -f $i
 					set fish_browser $i
 					set fish_browser_bg 1
 					break
@@ -54,15 +54,18 @@ function help --description 'Show help for the fish shell'
 			end
 		end
 
+		# If the OS appears to be Windows (graphical), try to use cygstart
+		if type -q cygstart
+			set fish_browser cygstart
 		# If xdg-open is available, just use that
-		if type xdg-open > /dev/null
+		else if type -q xdg-open
 			set fish_browser xdg-open
 		end
 	
 	
 		# On OS X, we go through osascript by default
 		if test (uname) = Darwin
-			if type osascript >/dev/null
+			if type -q osascript
 				set fish_browser osascript
 			end
 		end
@@ -71,7 +74,7 @@ function help --description 'Show help for the fish shell'
 
 	if test -z $fish_browser
 		printf (_ '%s: Could not find a web browser.\n') help
-		printf (_ 'Please set the variable $BROWSER to a suitable browser and try again\n\n')
+				printf (_ 'Please set the variable $BROWSER to a suitable browser and try again.\n\n')
 		return 1
 	end
 
@@ -82,8 +85,6 @@ function help --description 'Show help for the fish shell'
 			set fish_help_page index.html
 		case "."
 			set fish_help_page "commands.html\#source"
-		case difference
-			set fish_help_page difference.html
 		case globbing
 			set fish_help_page "index.html\#expand"
 		case (__fish_print_commands)
@@ -91,7 +92,7 @@ function help --description 'Show help for the fish shell'
 		case $help_topics
 			set fish_help_page "index.html\#$fish_help_item"
 		case "*"
-			if type -f $fish_help_item >/dev/null
+			if type -q -f $fish_help_item
 				# Prefer to use fish's man pages, to avoid
 				# the annoying useless "builtin" man page bash
 				# installs on OS X
@@ -125,10 +126,10 @@ function help --description 'Show help for the fish shell'
 
 		switch $fish_browser
 			case 'htmlview' 'x-www-browser'
-				printf (_ 'help: Help is being displayed in your default browser\n')
+				printf (_ 'help: Help is being displayed in your default browser.\n')
 
 			case '*'
-				printf (_ 'help: Help is being displayed in %s\n') $fish_browser
+				printf (_ 'help: Help is being displayed in %s.\n') $fish_browser
 
 		end
 
